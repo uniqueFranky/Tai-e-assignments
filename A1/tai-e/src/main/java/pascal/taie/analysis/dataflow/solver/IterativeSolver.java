@@ -53,6 +53,8 @@ class IterativeSolver<Node, Fact> extends Solver<Node, Fact> {
                     Fact curOut = result.getOutFact(curNode);
 
                     // merge IN[S] into OUT[B], i. e. calculate OUT[B]
+                    // since the transfer function is a monotonic function on a lattice, IN[s] never shrinks
+                    // so, it's correct to union IN[s] directly into OUT[B]
                     for(Node successor: cfg.getSuccsOf(curNode)) {
                         analysis.meetInto(result.getInFact(successor), curOut);
                     }
