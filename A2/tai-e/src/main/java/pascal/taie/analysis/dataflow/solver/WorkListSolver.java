@@ -25,6 +25,11 @@ package pascal.taie.analysis.dataflow.solver;
 import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.graph.cfg.CFG;
+import pascal.taie.ir.stmt.Stmt;
+
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
@@ -35,6 +40,27 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
     @Override
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+        ConcurrentLinkedQueue<Node> q = new ConcurrentLinkedQueue<>();
+        ConcurrentHashMap<Node, Boolean> inQueue = new ConcurrentHashMap<>();
+        for(Node node: cfg.getSuccsOf(cfg.getEntry())) {
+            q.add(node);
+            inQueue.put(node, true);
+        }
+        while(!q.isEmpty()) {
+            Node now = q.remove();
+            inQueue.put(now, false);
+            for(Node pre: cfg.getPredsOf(now)) {
+                analysis.meetInto(result.getOutFact(pre), result.getInFact(now));
+            }
+            if(analysis.transferNode(now, result.getInFact(now), result.getOutFact(now))) {
+                for(Node suc: cfg.getSuccsOf(now)) {
+                    if(!inQueue.containsKey(suc) || !inQueue.get(suc)) {
+                        q.add(suc);
+                        inQueue.put(suc, true);
+                    }
+                }
+            }
+        }
     }
 
     @Override
