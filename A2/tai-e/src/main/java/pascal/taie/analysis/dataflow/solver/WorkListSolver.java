@@ -41,22 +41,20 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
         ConcurrentLinkedQueue<Node> q = new ConcurrentLinkedQueue<>();
-        ConcurrentHashMap<Node, Boolean> inQueue = new ConcurrentHashMap<>();
-        for(Node node: cfg.getSuccsOf(cfg.getEntry())) {
+        // Add all nodes instead of merely the successors of the entry !!!!
+        // For the first round, the gens are not taken into account, so every node need to be considered!!!
+        for(Node node: cfg) {
             q.add(node);
-            inQueue.put(node, true);
         }
         while(!q.isEmpty()) {
             Node now = q.remove();
-            inQueue.put(now, false);
             for(Node pre: cfg.getPredsOf(now)) {
                 analysis.meetInto(result.getOutFact(pre), result.getInFact(now));
             }
             if(analysis.transferNode(now, result.getInFact(now), result.getOutFact(now))) {
                 for(Node suc: cfg.getSuccsOf(now)) {
-                    if(!inQueue.containsKey(suc) || !inQueue.get(suc)) {
+                    if(!q.contains(suc)) {
                         q.add(suc);
-                        inQueue.put(suc, true);
                     }
                 }
             }

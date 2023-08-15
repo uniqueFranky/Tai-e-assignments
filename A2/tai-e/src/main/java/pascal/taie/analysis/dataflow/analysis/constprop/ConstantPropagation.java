@@ -57,18 +57,6 @@ public class ConstantPropagation extends
     public CPFact newBoundaryFact(CFG<Stmt> cfg) {
         // TODO - finish me
         CPFact result = new CPFact();
-        for(Stmt stmt: cfg) {
-            Optional<LValue> lValueOptional = stmt.getDef();
-            List<RValue> rValue = stmt.getUses();
-            if(lValueOptional.isPresent() && lValueOptional.get() instanceof Var lVar && canHoldInt(lVar)) {
-                result.update(lVar, Value.getUndef());
-            }
-            for(RValue rVal: rValue) {
-                if(rVal instanceof Var rVar && canHoldInt(rVar)) {
-                    result.update(rVar, Value.getUndef());
-                }
-            }
-        }
 
         // Here getParams gets the parameters in function definitions
         // params should be set to NAC because they are not decided until the function is called
@@ -90,8 +78,7 @@ public class ConstantPropagation extends
     @Override
     public void meetInto(CPFact fact, CPFact target) {
         // TODO - finish me
-        Set<Var> keySet = fact.keySet();
-        for(Var key: keySet) {
+        for(Var key: fact.keySet()) {
             Value val1 = fact.get(key);
             Value val2 = target.get(key);
             // meet value is called here
@@ -135,17 +122,7 @@ public class ConstantPropagation extends
                 result.update(lVar, evaluate(rVal, in));
             }
         }
-        if(result.equals(out)) {
-            return false;
-        } else {
-            // out = result  IT IS WRONG!!!  that statement changes the object "out" points to, but doesn't change the
-            // real object we want to change
-            out.clear();
-            for(Var key: result.keySet()) {
-                out.update(key, result.get(key));
-            }
-            return true;
-        }
+        return out.copyFrom(result);
     }
 
     /**
@@ -267,7 +244,16 @@ public class ConstantPropagation extends
                     result = Value.getUndef();
                 }
             } else if(v1.isNAC() || v2.isNAC()) {
-                result = Value.getNAC();
+                if(exp instanceof ArithmeticExp arithmeticExp && (arithmeticExp.getOperator() == ArithmeticExp.Op.DIV ||
+                        arithmeticExp.getOperator() == ArithmeticExp.Op.REM)) {
+                    if(v2.isConstant() && 0 == v2.getConstant()) { // when divided by 0, always return Undef
+                        result = Value.getUndef();
+                    } else {
+                        result = Value.getNAC();
+                    }
+                } else {
+                    result = Value.getNAC();
+                }
             } else {
                 result = Value.getUndef();
             }
