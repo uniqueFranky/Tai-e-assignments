@@ -25,7 +25,6 @@ package pascal.taie.analysis.dataflow.analysis;
 import pascal.taie.analysis.MethodAnalysis;
 import pascal.taie.analysis.dataflow.analysis.constprop.CPFact;
 import pascal.taie.analysis.dataflow.analysis.constprop.ConstantPropagation;
-import pascal.taie.analysis.dataflow.analysis.constprop.Value;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.dataflow.fact.SetFact;
 import pascal.taie.analysis.graph.cfg.CFG;
@@ -40,10 +39,7 @@ import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.ir.stmt.SwitchStmt;
 import pascal.taie.util.collection.Pair;
 
-import java.util.Comparator;
-import java.util.Queue;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DeadCodeDetection extends MethodAnalysis {
@@ -68,7 +64,6 @@ public class DeadCodeDetection extends MethodAnalysis {
         Set<Stmt> deadCode = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
         // TODO - finish me
         // Your task is to recognize dead code in ir and add it to deadCode
-
         // Control Flow Unreachable
         analyzeControlFlowUnreachable(cfg, deadCode, ir);
 
@@ -79,7 +74,7 @@ public class DeadCodeDetection extends MethodAnalysis {
         analyzeSwitchStmtUnreachable(cfg, deadCode, constants);
 
         // Propagate Unreachable Control Flow
-        propagateUnreachableControlFlow(cfg, deadCode);
+        propagateUnreachable(cfg, deadCode);
 
         // Useless Assignment
         analyzeUselessAssignment(cfg, deadCode, liveVars);
@@ -158,18 +153,20 @@ public class DeadCodeDetection extends MethodAnalysis {
                 Var var = switchStmt.getVar();
                 if(constants.getOutFact(stmt).get(var).isConstant()) {
                     boolean match = false;
+                    Stmt matchStmt = null;
                     int v = constants.getOutFact(stmt).get(var).getConstant();
                     for(Pair<Integer, Stmt> pair :switchStmt.getCaseTargets()) {
                         if(v != pair.first()) {
                             deadCode.add(pair.second());
                         } else {
                             match = true;
+                            matchStmt = pair.second();;
                         }
                     }
                     if(match) { // if any case is matched, default is unreachable
                         deadCode.add(switchStmt.getDefaultTarget());
+                        recoverFallThrough(cfg, matchStmt, deadCode); // handle fall through cases
                     }
-
                 }
             }
         }
@@ -187,10 +184,11 @@ public class DeadCodeDetection extends MethodAnalysis {
         }
     }
 
-    private void propagateUnreachableControlFlow(CFG<Stmt> cfg, Set<Stmt> deadCode) {
+    private void propagateUnreachable(CFG<Stmt> cfg, Set<Stmt> deadCode) {
         Queue<Stmt> q = new ConcurrentLinkedQueue<>(deadCode);
         while(!q.isEmpty()) {
             Stmt now = q.remove();
+            deadCode.add(now);
             for(Stmt suc: cfg.getSuccsOf(now)) {
                 boolean unreachable = true;
                 for(Stmt sucPre: cfg.getPredsOf(suc)) {
@@ -200,10 +198,25 @@ public class DeadCodeDetection extends MethodAnalysis {
                     }
                 }
                 if(unreachable && !cfg.isExit(suc)) { // exclude exit
-                    deadCode.add(suc);
-                    if(!q.contains(suc)) {
+                    if(!q.contains(suc) && !deadCode.contains(suc)) {
                         q.add(suc);
                     }
+                }
+            }
+        }
+    }
+
+    private void recoverFallThrough(CFG<Stmt> cfg, Stmt stmt, Set<Stmt> deadCode) {
+        Queue<Stmt> q = new ConcurrentLinkedQueue<>();
+        Set<Stmt> visit = new HashSet<>();
+        q.add(stmt);
+        while(!q.isEmpty()) {
+            Stmt now = q.remove();
+            visit.add(now);
+            for(Stmt suc: cfg.getSuccsOf(now)) {
+                deadCode.remove(suc);
+                if(!visit.contains(suc)) {
+                    q.add(suc);
                 }
             }
         }
