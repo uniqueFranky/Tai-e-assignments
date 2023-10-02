@@ -26,6 +26,8 @@ import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.graph.cfg.CFG;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
     WorkListSolver(DataflowAnalysis<Node, Fact> analysis) {
@@ -35,10 +37,51 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
     @Override
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+        ConcurrentLinkedQueue<Node> q = new ConcurrentLinkedQueue<>();
+        // Add all nodes instead of merely the successors of the entry !!!!
+        // For the first round, the gens are not taken into account, so every node need to be considered!!!
+        for(Node node: cfg) {
+            q.add(node);
+        }
+        while(!q.isEmpty()) {
+            Node now = q.remove();
+
+            for(Node pre: cfg.getPredsOf(now)) {
+                analysis.meetInto(result.getOutFact(pre), result.getInFact(now));
+            }
+            if(analysis.transferNode(now, result.getInFact(now), result.getOutFact(now))) {
+                for(Node suc: cfg.getSuccsOf(now)) {
+                    if(!q.contains(suc)) {
+                        q.add(suc);
+                    }
+                }
+            }
+        }
     }
 
     @Override
     protected void doSolveBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+
+        ConcurrentLinkedQueue<Node> q = new ConcurrentLinkedQueue<>();
+
+        for(Node node: cfg) {
+            q.add(node);
+        }
+
+        while(!q.isEmpty()) {
+            Node now = q.remove();
+
+            for(Node suc: cfg.getSuccsOf(now)) {
+                analysis.meetInto(result.getInFact(suc), result.getOutFact(now));
+            }
+            if(analysis.transferNode(now, result.getInFact(now), result.getOutFact(now))) {
+                for(Node pre: cfg.getPredsOf(now)) {
+                    if(!q.contains(pre)) {
+                        q.add(pre);
+                    }
+                }
+            }
+        }
     }
 }
