@@ -46,6 +46,7 @@ import pascal.taie.language.classes.JMethod;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Implementation of interprocedural constant propagation for int values.
@@ -86,15 +87,17 @@ public class InterConstantPropagation extends
     @Override
     protected boolean transferCallNode(Stmt stmt, CPFact in, CPFact out) {
         // TODO - finish me
-        boolean changed = cp.transferNode(stmt, in, out);
-        CPFact old = out.copy();
-        if(stmt instanceof Invoke invoke) {
-            Var var = invoke.getLValue();
-            if(null != var) {
-                out.remove(var);
-            }
-        }
-        return changed || !old.equals(out);
+//        boolean changed = cp.transferNode(stmt, in, out);
+////        CPFact old = out.copy();
+////        if(stmt instanceof Invoke invoke) {
+////            Var var = invoke.getLValue();
+////            if(null != var) {
+////                out.remove(var);
+////            }
+////        }
+////        return changed || !old.equals(out);
+
+        return out.copyFrom(in);
     }
 
     @Override
@@ -152,7 +155,7 @@ public class InterConstantPropagation extends
         Collection<Var> returnVars = edge.getReturnVars();
         if(callSite instanceof Invoke invoke) {
             Var override = invoke.getLValue();
-            if(null != override) {
+            if(null != override && ConstantPropagation.canHoldInt(override)) {
                 Value val = Value.getUndef();
                 for(Var ret: returnVars) {
                     val = cp.meetValue(val, returnOut.get(ret));
