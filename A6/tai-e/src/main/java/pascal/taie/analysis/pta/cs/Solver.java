@@ -155,7 +155,7 @@ class Solver {
                     List<Var> args = stmt.getInvokeExp().getArgs();
                     List<Var> params = calledMethod.getIR().getParams();
 
-                    List<Var> retVars = csMethod.getMethod().getIR().getReturnVars();
+                    List<Var> retVars = calledMethod.getIR().getReturnVars();
                     assert args.size() == params.size();
 
                     for(int i = 0; i < args.size(); i++) {

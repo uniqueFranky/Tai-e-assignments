@@ -44,7 +44,7 @@ public class _2TypeSelector implements ContextSelector {
     @Override
     public Context selectContext(CSCallSite callSite, JMethod callee) {
         // TODO - finish me
-        return ListContext.make();
+        return callSite.getContext();
     }
 
     @Override

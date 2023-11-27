@@ -44,7 +44,7 @@ public class _2ObjSelector implements ContextSelector {
     public Context selectContext(CSCallSite callSite, JMethod callee) {
         // TODO - finish me
         // static call
-        return ListContext.make();
+        return callSite.getContext();
     }
 
     @Override
