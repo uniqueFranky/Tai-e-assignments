@@ -262,11 +262,12 @@ public class Solver {
             PointsToSet delta = propagate(entry.pointer(), entry.pointsToSet());
             if(entry.pointer() instanceof CSVar csVar) {
 
-                for(CSObj csObj: delta) {
 
-//                    if(taintAnalysis.isTaint(csObj.getObject())) {
-//                        continue;
-//                    }
+                /*
+                    some taint transfer functions are called on the tainted object
+                    so we can't just continue if csObj is tainted.
+                */
+                for(CSObj csObj: delta) {
 
                     for(LoadField stmt: csVar.getVar().getLoadFields()) {
                         CSVar lCSVar = csManager.getCSVar(csVar.getContext(), stmt.getLValue());

@@ -122,8 +122,6 @@ public class TaintAnalysiss {
                 if(-1 == taintTransfer.from() && null != recv) { // from base
 
                     if(manager.isTaint(recvObj)) {
-                        System.out.println("from base!!!!!" + recv);
-
                         Obj taint = manager.makeTaint(manager.getSourceCall(recvObj), taintTransfer.type());
                         solver.addToWorkList(to, csManager.getCSObj(emptyContext, taint));
                     }
